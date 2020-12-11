@@ -1,14 +1,29 @@
 import webvtt
 import sys
 import argparse
+import re
+from os import listdir
+from os.path import isfile, join
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', dest="output", metavar="OUTPUT.html", type=argparse.FileType('w', encoding='UTF-8'), default=sys.stdout, help="write to output file")
-parser.add_argument("main_lang", type=str, help="main language")
-parser.add_argument("sub_lang", type=str, help="sub language")
-parser.add_argument('input_files', nargs='*', type=str, help="/path/to/*\[cc\].vtt")
+parser.add_argument("-d", dest="dir", metavar="Directory", type=str, help="/path/to/vtt/dir")
 
 args = parser.parse_args()
+
+files = [f for f in listdir(args.dir) if isfile(join(args.dir, f))]
+vtt_files_name = [f for f in files if re.match('.*\.vtt$', f)]
+cc_vtt_files_name = [f for f in files if re.match('.*\[cc\]\.vtt$', f)]
+cc_vtt_files_name.sort()
+langs = map(lambda name: re.search('.*\.(.+?)\.vtt', name).group(1) ,vtt_files_name)
+langs = list(set(langs)) # uniq
+langs.sort()
+
+for index, lang in enumerate(langs):
+  print('[{idx:d}] {title:s}'.format(idx=index, title=lang))
+
+main_lang_idx = int(input("select main lang: "))
+sub_lang_idx = int(input("select sub lang: "))
 
 def write(str):
     args.output.write(str)
@@ -52,12 +67,13 @@ def convert_file(file_name, main_lang, sub_lang):
 
 # main
 write("<html>")
-for idx, vtt_file in enumerate(args.input_files):
+for idx, vtt_file_name in enumerate(cc_vtt_files_name):
+  vtt_file = join(args.dir, vtt_file_name)
   write('<title>Episode' + str(idx + 1) + '</title>')
   write('<p>======================')
   write('<p>Episode ' + str(idx + 1))
   write('<p>======================')
   write('')
-  convert_file(vtt_file, args.main_lang, args.sub_lang)
+  convert_file(vtt_file, langs[main_lang_idx], langs[sub_lang_idx])
 
 write("</html>")
